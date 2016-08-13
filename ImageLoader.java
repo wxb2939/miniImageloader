@@ -6,7 +6,6 @@ package cn.mini.miniimageloader;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.util.LruCache;
 import android.widget.ImageView;
 
 import java.net.HttpURLConnection;
@@ -20,28 +19,17 @@ import java.util.concurrent.Executors;
 public class ImageLoader {
 
     //图片缓存
-    LruCache<String,Bitmap> mImageCache;
-
+    ImageCache mImageCache = new ImageCache();
     //线程池，线程数量为CPU的数量
     ExecutorService mExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    public ImageLoader(){
-        initImageCache();
-    }
-
-    private void initImageCache(){
-        //计算可使用的最大内存
-        final int maxMemory = (int)(Runtime.getRuntime().maxMemory()/1024);
-        final int cacheSize = maxMemory/4;
-        mImageCache = new LruCache<String, Bitmap>(cacheSize){
-            @Override
-            protected int sizeOf(String key, Bitmap bitmap) {
-                return bitmap.getRowBytes()*bitmap.getHeight() / 1024;
-            }
-        };
-    }
-
+    //加载图片
     public void displayImage(final String url, final ImageView imageView){
+        Bitmap bitmap = mImageCache.get(url);
+        if (bitmap != null){
+            imageView.setImageBitmap(bitmap);
+            return;
+        }
         imageView.setTag(url);
         mExecutorService.submit(new Runnable() {
             @Override
