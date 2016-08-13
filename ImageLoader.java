@@ -1,9 +1,5 @@
 package cn.mini.miniimageloader;
 
-/**
- * Created by xuebing on 16/8/13.
- */
-
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.widget.ImageView;
@@ -14,40 +10,49 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * 图片加载类
+ * Created by xuebing on 16/8/13.
  */
 public class ImageLoader {
-
     //图片缓存
-    ImageCache mImageCache = new ImageCache();
-    //线程池，线程数量为CPU的数量
+    ImageCache mImageCache = new MemoryCache();
+    //线程池，数量为CPU的数量
     ExecutorService mExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-    //加载图片
-    public void displayImage(final String url, final ImageView imageView){
-        Bitmap bitmap = mImageCache.get(url);
+    //注入缓存实现
+    public void setImageCache(ImageCache cache){
+        mImageCache = cache;
+    }
+
+    public void displayImage(String imageUrl, ImageView imageView){
+        Bitmap bitmap = mImageCache.get(imageUrl);
         if (bitmap != null){
             imageView.setImageBitmap(bitmap);
             return;
         }
-        imageView.setTag(url);
+
+        //图片没缓存，提交到线程池中下载图片
+        submitLoadRequest(imageUrl,imageView);
+    }
+
+    private void submitLoadRequest(final String imageUrl,final ImageView imageView){
+        imageView.setTag(imageUrl);
         mExecutorService.submit(new Runnable() {
             @Override
             public void run() {
-                Bitmap bitmap = downloadImage(url);
+                Bitmap bitmap = downloadImage(imageUrl);
                 if (bitmap == null){
                     return;
                 }
-                if (imageView.getTag().equals(url)){
+
+                if (imageView.getTag().equals(imageUrl)){
                     imageView.setImageBitmap(bitmap);
                 }
-                mImageCache.put(url,bitmap);
+                mImageCache.put(imageUrl,bitmap);
             }
         });
     }
 
-
-    public Bitmap downloadImage(String imageUrl){
+    private Bitmap downloadImage(String imageUrl){
         Bitmap bitmap = null;
         try {
             URL url = new URL(imageUrl);
@@ -59,4 +64,5 @@ public class ImageLoader {
         }
         return bitmap;
     }
+
 }
